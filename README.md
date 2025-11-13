@@ -34,4 +34,4 @@ Bitrise provides AMIs for building mobile applications on Amazon EC2 instances w
 
 The Bitrise Cloud Controller managed builder nodes can interact with many Amazon services, like AWS Secrets Manager to access tokens, keys and other secrets required for running CI builds.
 
-The bitrise.yaml file contains the configuration for the Pipeline and the Workflows to build, test and deploy the iOS Banking demo app:
+The bitrise.yaml file contains the configuration for the Pipeline and the Workflows to build, test and deploy the iOS Banking demo app: 
