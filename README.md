@@ -14,7 +14,6 @@ The codebase contains the following components:
 Bitrise is a mobile DevOps platform that provides automation and security designed for mobile development. Running Bitrise on AWS combines DevOps workflows with Amazon Elastic Compute Cloud (Amazon EC2) Mac instances, giving teams dedicated Apple hardware in the cloud for building iOS applications. Together with services like AWS Device Farm, which runs automated tests on real devices, teams gain an end-to-end environment for secure, fast, and reliable mobile application delivery.
 
 ---
-
 <img align="center" width="965" height="586" alt="c6a2f5bb-cccc-4d91-be0a-978f396fe73c" src="https://github.com/user-attachments/assets/d19dd7c6-4d9e-44b1-be8a-0c9601955c91" />
 
 ## 🤖 Serverless User Accounts & Transactions API backend
@@ -30,8 +29,23 @@ Bitrise is a mobile DevOps platform that provides automation and security design
 
 Bitrise provides AMIs for building mobile applications on Amazon EC2 instances with all the tools preinstalled. With the [Bitrise Cloud Controller](https://docs.bitrise.io/en/bitrise-platform/infrastructure/bitrise-on-aws--cloud-controller/bitrise-on-aws-overview.html) it is only a few minutes of configuration to have a fully working MacOS infrastructure on AWS that is ready to run the builds. 
 
-<img align="center" width="802" height="383" alt="513856172-525e8a16-755c-4032-b9e7-51f4d445675d" src="https://github.com/user-attachments/assets/bf71e88f-0fc2-44a6-95bc-1fb881f43c02" />
+<p align="center">
+ <img align="center" width="561" height="268" alt="513856172-525e8a16-755c-4032-b9e7-51f4d445675d" src="https://github.com/user-attachments/assets/bf71e88f-0fc2-44a6-95bc-1fb881f43c02" />
+</p>
 
 The Bitrise Cloud Controller managed builder nodes can interact with many Amazon services, like AWS Secrets Manager to access tokens, keys and other secrets required for running CI builds.
 
-The bitrise.yaml file contains the configuration for the Pipeline and the Workflows to build, test and deploy the iOS Banking demo app:
+### Bitrise CI/CD Pipeline and Workflows
+
+The bitrise.yaml file contains the configuration for the Pipeline and the Workflows to build, test and deploy the iOS Banking demo app. The Pipeline feature enables parallel execution of the Workflows for faster feedback loop:
+
+<p align="center">
+  <img width="825" height="400" alt="image2" src="https://github.com/user-attachments/assets/2e4a6c90-9801-491b-96e2-c30c0433bfc1" />
+</p>
+
+The Workflows validate different aspects of the codebase, for example running an AWS Device Farm testing:
+
+<p align="center">
+  <img width="825" height="400" alt="Screenshot 2025-11-13 at 13 59 20" src="https://github.com/user-attachments/assets/e2935e7f-318d-4b57-a666-f99bf19b5969" />
+</p>
+
