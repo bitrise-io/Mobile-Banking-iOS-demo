@@ -1,0 +1,14 @@
+{
+  "api": {
+    "plugins": {
+      "awsAPIPlugin": {
+        "YourAPIName": {
+          "endpointType": "REST",
+          "endpoint": "https://REPLACE.execute-api.eu-central-1.amazonaws.com/prod/",
+          "region": "eu-central-1",
+          "authorizationType": "NONE"
+        }
+      }
+    }
+  }
+}

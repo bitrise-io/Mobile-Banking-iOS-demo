@@ -1,0 +1,418 @@
+---
+format_version: '20'
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+project_type: ios
+app:
+  envs:
+  - TEST_SHARD_COUNT: 2
+  - BITRISE_PROJECT_PATH: "./"
+    opts:
+      is_expand: false
+  - BITRISE_SCHEME: BitriseBankingiOSDemo
+    opts:
+      is_expand: false
+  - BITRISE_DISTRIBUTION_METHOD: enterprise
+    opts:
+      is_expand: false
+workflows:
+  testflight_deploy:
+    steps:
+    - script@1:
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            echo $BITRISE_GIT_BRANCH
+
+            aws secretsmanager list-secrets --region eu-central-1 --query "SecretList[].Name" --output text
+
+            set +x
+            envman add --key GIT_HTTP_USERNAME --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitUsername --region eu-central-1 | jq  -r '.SecretString')
+            envman add --key GIT_HTTP_PASSWORD --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitPassword --region eu-central-1 | jq  -r '.SecretString')
+            set -x
+
+            git config --global url."https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/".insteadOf "https://github.com/"
+
+            git clone https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/ilsinszkibal/AWS-Bitrise-Banking-iOS-Demo.git
+
+            cd ./AWS-Bitrise-Banking-iOS-Demo
+            git checkout $BITRISE_GIT_BRANCH
+            git rev-parse HEAD
+            cd ..
+        title: Clone the repo
+    - script@1:
+        title: Download cert and prov profile from S3
+        inputs:
+        - content: "#!/usr/bin/env bash
+
+            # fail if any commands fails
+
+            set -e
+
+            # make pipelines' return status equal the last command to exit with
+            a non-zero status, or zero if all commands exit successfully
+
+            set -o pipefail
+
+            # debug log
+
+            set -x
+
+
+            aws s3 sync s3://bitrise-banking-ios-demo-signing-certs .
+
+
+            # Install the provisioning profile
+
+            uuid=`grep UUID -A1 -a BitriseBankingiOSDemo.mobileprovision | grep
+            -io \"[-A-F0-9]\\{36\\}\"`
+
+            #cp BitriseBankingiOSDemo.mobileprovision
+            ~/Library/MobileDevice/Provisioning\\ Profiles/$uuid.mobileprovision
+
+
+            mkdir /Users/vagrant/git/AWS-Bitrise-Banking-iOS-Demo/Utility/
+
+
+            cp BitriseBankingiOSDemo.mobileprovision
+            /Users/vagrant/git/AWS-Bitrise-Banking-iOS-Demo/Utility/
+
+            cp Certificates.p12
+            /Users/vagrant/git/AWS-Bitrise-Banking-iOS-Demo/Utility/
+
+
+            # Add the cert to keychain
+
+            #sudo security import Certificates.p12 -k
+            ~/Library/Keychains/login.keychain-db -f pkcs12\ \n"
+    - certificate-and-profile-installer@1: {}
+    - set-xcode-build-number@2:
+        inputs:
+        - project_path: "./AWS-Bitrise-Banking-iOS-Demo/BitriseBankingiOSDemo/BitriseBank\
+            ingiOSDemo.xcodeproj"
+        - verbose: true
+        - build_short_version_string: 1.3
+    - script@1:
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            FILE="./AWS-Bitrise-Banking-iOS-Demo/BtriseBankingiOSDemo/BitriseBankingiOSDemo/amplifyconfiguration.json"
+
+            set +x
+            ENDPOINT=$(aws secretsmanager get-secret-value --secret-id BitriseDemoEndpoint --region eu-central-1 | jq  -r '.SecretString')
+            #envman add --key ENDPOINT --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoEndpoint --region eu-central-1 | jq  -r '.SecretString')
+
+            sed 's/REPLACE/'"$ENDPOINT"'/g' "$FILE" > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+
+            set -x
+        title: Update Endpoint
+    - xcode-archive@5:
+        inputs:
+        - distribution_method: app-store
+        - project_path: "./AWS-Bitrise-Banking-iOS-Demo/BitriseBankingiOSDemo/BitriseBank\
+            ingiOSDemo.xcodeproj"
+        - testflight_internal_testing_only: 'no'
+        - fallback_provisioning_profile_url_list: "$BITRISE_PROVISION_URL"
+        - xcodebuild_options: "-scmProvider system -packageAuthorizationProvider netrc"
+    - deploy-to-bitrise-io@2: {}
+    triggers:
+      pull_request:
+      - target_branch: "*"
+        enabled: false
+    meta:
+      bitrise.io:
+        stack: agent-pool-068b79a4-06c0-4c7e-be1c-4eb7c63cffaf
+  backend_deploy:
+    steps:
+    - script@1:
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            echo $BITRISE_GIT_BRANCH
+
+            aws secretsmanager list-secrets --region eu-central-1 --query "SecretList[].Name" --output text
+
+            envman add --key GIT_HTTP_USERNAME --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitUsername --region eu-central-1 | jq  -r '.SecretString')
+            envman add --key GIT_HTTP_PASSWORD --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitPassword --region eu-central-1 | jq  -r '.SecretString')
+
+            git config --global url."https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/".insteadOf "https://github.com/"
+
+            git clone https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/ilsinszkibal/AWS-Bitrise-Banking-iOS-Demo.git
+
+            cd ./AWS-Bitrise-Banking-iOS-Demo
+            git checkout $BITRISE_GIT_BRANCH
+            git rev-parse HEAD
+            cd ..
+        title: git clone
+    - script@1:
+        inputs:
+        - content: "set -ex
+
+
+            cd ./AWS-Bitrise-Banking-iOS-Demo/BitriseBankingiOSDemoBackend
+
+
+            # Set up Python environment
+
+            python3 -m venv venv
+
+            source venv/bin/activate
+
+            pip3 install -r requirements.txt
+
+
+            # Install CDK\
+
+            npm install -g aws-cdk
+
+            pip3 install aws-cdk-lib
+
+            cd cdk
+
+
+            # cdk deploy --outputs-file ./cdk-outputs.json --require-approval
+            never
+
+
+            printenv
+
+
+            # Deploy the stack
+
+            # cdk deploy --outputs-file ./cdk-outputs.json --require-approval
+            never
+
+
+            # Save the API endpoint in ev var and pass it along to other
+            workflows in the pipeline
+
+            # export AWS_API_ENDPOINT=$(cat cdk-outputs.json | jq -r
+            '.ApiEndpoint')
+
+            # printenv"
+        title: deploy
+    - share-pipeline-variable@1:
+        inputs:
+        - variables: AWS_API_ENDPOINT
+    meta:
+      bitrise.io:
+        stack: agent-pool-068b79a4-06c0-4c7e-be1c-4eb7c63cffaf
+  backend_destroy:
+    steps:
+    - script@1:
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            echo $BITRISE_GIT_BRANCH
+
+            aws secretsmanager list-secrets --region eu-central-1 --query "SecretList[].Name" --output text
+
+            envman add --key GIT_HTTP_USERNAME --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitUsername --region eu-central-1 | jq  -r '.SecretString')
+            envman add --key GIT_HTTP_PASSWORD --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitPassword --region eu-central-1 | jq  -r '.SecretString')
+
+            git config --global url."https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/".insteadOf "https://github.com/"
+
+            git clone https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/ilsinszkibal/AWS-Bitrise-Banking-iOS-Demo.git
+
+            cd ./AWS-Bitrise-Banking-iOS-Demo
+            git checkout $BITRISE_GIT_BRANCH
+            git rev-parse HEAD
+            cd ..
+        title: git clone
+    - script@1:
+        inputs:
+        - content: "set -ex
+
+
+            cd ./AWS-Bitrise-Banking-iOS-Demo/BitriseBankingiOSDemoBackend
+
+
+            # Set up Python environment
+
+            python3 -m venv venv
+
+            source venv/bin/activate
+
+            pip3 install -r requirements.txt
+
+
+            # Install CDK\
+
+            npm install -g aws-cdk
+
+            pip3 install aws-cdk-lib
+
+            cd cdk
+
+
+            # Check if OTHER_ENV is set
+
+            #if [ -z \"$OTHER_ENV\" ]; then
+
+            #    echo \"Error: OTHER_ENV is not set\"
+
+            #    exit 1
+
+            #fi
+
+
+            #export API_ENDPOINT=$AWS_API_ENDPOINT
+
+
+            # Destroy the stack
+
+            # cdk destroy UserApiStack --force"
+        title: destroy
+    meta:
+      bitrise.io:
+        stack: agent-pool-068b79a4-06c0-4c7e-be1c-4eb7c63cffaf
+  notify_on_new_release:
+    steps:
+    - script:
+        title: Notify Team on New Release
+    meta:
+      bitrise.io:
+        stack: agent-pool-068b79a4-06c0-4c7e-be1c-4eb7c63cffaf
+  aws_device_farm_testing:
+    steps:
+    - script@1:
+        inputs:
+        - content: |-
+            #!/usr/bin/env bash
+            # fail if any commands fails
+            set -e
+            # make pipelines' return status equal the last command to exit with a non-zero status, or zero if all commands exit successfully
+            set -o pipefail
+            # debug log
+            set -x
+
+            echo $BITRISE_GIT_BRANCH
+
+            aws secretsmanager list-secrets --region eu-central-1 --query "SecretList[].Name" --output text
+
+            envman add --key GIT_HTTP_USERNAME --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitUsername --region eu-central-1 | jq  -r '.SecretString')
+            envman add --key GIT_HTTP_PASSWORD --value $(aws secretsmanager get-secret-value --secret-id BitriseDemoGitPassword --region eu-central-1 | jq  -r '.SecretString')
+
+            git config --global url."https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/".insteadOf "https://github.com/"
+
+            git clone https://${GIT_HTTP_USERNAME}:${GIT_HTTP_PASSWORD}@github.com/ilsinszkibal/AWS-Bitrise-Banking-iOS-Demo.git
+
+            cd ./AWS-Bitrise-Banking-iOS-Demo
+            git checkout $BITRISE_GIT_BRANCH
+            git rev-parse HEAD
+            cd ..
+        title: Clone the repo
+    - script@1:
+        title: Download cert and prov profile from S3
+        inputs:
+        - content: "#!/usr/bin/env bash
+
+            # fail if any commands fails
+
+            set -e
+
+            # make pipelines' return status equal the last command to exit with
+            a non-zero status, or zero if all commands exit successfully
+
+            set -o pipefail
+
+            # debug log
+
+            set -x
+
+
+            aws s3 sync s3://bitrise-banking-ios-demo-signing-certs .
+
+
+            # Install the provisioning profile
+
+            uuid=`grep UUID -A1 -a BitriseBankingiOSDemo.mobileprovision | grep
+            -io \"[-A-F0-9]\\{36\\}\"`
+
+            #cp BitriseBankingiOSDemo.mobileprovision
+            ~/Library/MobileDevice/Provisioning\\ Profiles/$uuid.mobileprovision
+
+
+            mkdir /Users/vagrant/git/AWS-Bitrise-Banking-iOS-Demo/Utility/
+
+
+            cp BitriseBankingiOSDemo.mobileprovision
+            /Users/vagrant/git/AWS-Bitrise-Banking-iOS-Demo/Utility/
+
+            cp Certificates.p12
+            /Users/vagrant/git/AWS-Bitrise-Banking-iOS-Demo/Utility/
+
+
+            # Add the cert to keychain
+
+            #sudo security import Certificates.p12 -k
+            ~/Library/Keychains/login.keychain-db -f pkcs12\ \n"
+    - certificate-and-profile-installer@1: {}
+    - set-xcode-build-number@2:
+        inputs:
+        - project_path: "./AWS-Bitrise-Banking-iOS-Demo/BitriseBankingiOSDemo/BitriseBank\
+            ingiOSDemo.xcodeproj"
+        - verbose: true
+        - build_short_version_string: 1.3
+    - xcode-archive@5:
+        inputs:
+        - distribution_method: app-store
+        - project_path: "./AWS-Bitrise-Banking-iOS-Demo/BitriseBankingiOSDemo/BitriseBank\
+            ingiOSDemo.xcodeproj"
+        - testflight_internal_testing_only: 'no'
+        - fallback_provisioning_profile_url_list: "$BITRISE_PROVISION_URL"
+        - xcodebuild_options: "-scmProvider system -packageAuthorizationProvider netrc"
+    - script:
+        title: AWS Device Farm Testing
+        run_if: '{{enveq "CUSTOM_ENV_VAR_KEY" "test value to test against"}}'
+    meta:
+      bitrise.io:
+        stack: agent-pool-068b79a4-06c0-4c7e-be1c-4eb7c63cffaf
+meta:
+  bitrise.io:
+    stack: agent-pool-a8ba09e4-6234-4833-b80d-f3218d729692
+pipelines:
+  iOSDeviceTestAndDeploy:
+    workflows:
+      backend_deploy: {}
+      backend_destroy:
+        depends_on:
+        - aws_device_farm_testing
+      testflight_deploy: {}
+      notify_on_new_release:
+        depends_on:
+        - testflight_deploy
+        - backend_destroy
+      aws_device_farm_testing:
+        depends_on:
+        - backend_deploy
+    triggers:
+      pull_request:
+      - target_branch: "*"

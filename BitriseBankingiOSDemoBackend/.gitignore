@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# CDK output
+cdk.out/
+
+# Python virtual environments
+.venv/
+env/
+venv/
+
+# macOS-specific
+.DS_Store
+
+# Logs
+*.log
+
+# VSCode settings (optional)
+.vscode/
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+
+# AWS credentials (never commit these)
+*.pem
+*.env
+*.key
+*.crt
+.aws/
+
+# Ignore pip cache
+pip-wheel-metadata/
